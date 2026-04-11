@@ -1,4 +1,4 @@
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 from django.shortcuts import render
 from blog.models import Comment, Post, Tag
 
@@ -38,7 +38,7 @@ def index(request):
     #most_popular_posts = popular_posts[-5:]
     most_popular_posts = Post.objects.annotate(
         likes_count=Count('likes')
-    ).order_by('-likes_count')[:5]
+    ).select_related('author').prefetch_related('tags').order_by('-likes_count')[:5]
 
     fresh_posts = Post.objects.order_by('published_at')
     most_fresh_posts = list(fresh_posts)[-5:]
@@ -97,7 +97,7 @@ def post_detail(request, slug):
     #most_popular_posts = []  # TODO. Как это посчитать?
     most_popular_posts = Post.objects.annotate(
         likes_count=Count('likes')
-    ).order_by('-likes_count')[:5]
+    ).select_related('author').prefetch_related('tags').order_by('-likes_count')[:5]
 
     context = {
         'post': serialized_post,
