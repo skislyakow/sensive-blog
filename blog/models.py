@@ -1,13 +1,53 @@
 from django.db import models
 from django.urls import reverse
 from django.contrib.auth.models import User
-from django.db.models import Count
+from django.db.models import Count, OuterRef, Subquery
 
 
 class PostQuerySet(models.QuerySet):
     def year(self, year):
         posts_at_year = self.filter(published_at__year=year).order_by('published_at')
         return posts_at_year
+
+    def popular(self):
+        return self.annotate(likes_count=Count('likes')).order_by('-likes_count')
+    
+    def fetch_with_comments_count(self):
+        """
+        Добавляет к каждому посту количество комментариев через Subquery.
+        
+        Разберём по частям:
+        
+        1. OuterRef('id') - ссылка на поле 'id' из ВНЕШНЕГО (outer) запроса.
+           Без OuterRef Django не знал бы, к какой именно записи обращаться.
+        
+        2. Comment.objects.filter(post_id=OuterRef('id')) - для каждого поста
+           находим все комментарии, где post_id равен id этого поста.
+        
+        3. .annotate(count=Count('*')) - считаем количество таких комментариев.
+           Count('*') = посчитать все записи (можно просто Count('id'))
+        
+        4. .values('count') - берём только поле count (агрегат)
+        
+        5. Subquery(...) - оборачиваем это в подзапрос, чтобы использовать
+           как поле основного запроса
+        
+        Плюс этого подхода перед annotate(Count('comments')):
+        - Работает даже когда простой Count не справляется (например, со
+          сложными условиями фильтрации)
+        - Можно переиспользовать в других QuerySet
+        Нужны популярные с комментариями-Post.objects.popular().fetch_with_comments_count()
+        Нужны свежие с комментариями-Post.objects.order_by('-published_at').fetch_with_comments_count()
+        Нужен один метод-some_queryset.fetch_with_comments_count()
+        - Даёт точный контроль над подзапросом
+        """
+        return self.annotate(
+            comments_count=Subquery(
+                Comment.objects.filter(post_id=OuterRef('id'))
+                .annotate(count=Count('id'))
+                .values('count')
+            )
+        )
 
 
 class TagQuerySet(models.QuerySet):
