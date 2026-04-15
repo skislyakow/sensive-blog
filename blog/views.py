@@ -32,17 +32,15 @@ def serialize_tag(tag):
 def index(request):
     most_popular_posts = Post.objects.popular().prefetch_related(
         'author',
-        Prefetch('tags', queryset=Tag.objects.annotate(
-            tags_count=Count('posts')
-        ).order_by())).fetch_with_comments_count()[:5]
+        Prefetch(
+            'tags', queryset=Tag.objects.with_posts_count()
+        )).fetch_with_comments_count()[:5]
 
     fresh_posts = Post.objects.annotate(
         comments_count=Count('comments')
     ).prefetch_related(
         'author', Prefetch(
-            'tags', queryset=Tag.objects.annotate(
-                tags_count=Count('posts')
-            ).order_by()
+            'tags', queryset=Tag.objects.with_posts_count()
         )
     ).order_by('published_at')
 
@@ -71,9 +69,7 @@ def post_detail(request, slug):
         'author'
     ).prefetch_related(
         'likes', Prefetch(
-            'tags', queryset=Tag.objects.annotate(
-                tags_count=Count('posts')
-            ).order_by()
+            'tags', queryset=Tag.objects.with_posts_count()
         )
     ).get(slug=slug)
     comments = Comment.objects.filter(post=post).select_related('author')
@@ -105,9 +101,7 @@ def post_detail(request, slug):
         'author'
     ).prefetch_related(
         Prefetch(
-            'tags', queryset=Tag.objects.annotate(
-                tags_count=Count('posts')
-            ).order_by()
+            'tags', queryset=Tag.objects.with_posts_count()
         )
     ).fetch_with_comments_count()[:5]
 
@@ -128,17 +122,13 @@ def tag_filter(request, tag_title):
 
     most_popular_posts = Post.objects.popular().prefetch_related(
         'author', Prefetch(
-            'tags', queryset=Tag.objects.annotate(
-                tags_count=Count('posts')
-            ).order_by()
+            'tags', queryset=Tag.objects.with_posts_count()
         )
     ).fetch_with_comments_count()[:5]
 
     related_posts = tag.posts.prefetch_related(
         'author', Prefetch(
-            'tags', queryset=Tag.objects.annotate(
-                tags_count=Count('posts')
-            ).order_by()
+            'tags', queryset=Tag.objects.with_posts_count()
         )
     ).fetch_with_comments_count()[:20]
 
