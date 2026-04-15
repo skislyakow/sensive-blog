@@ -3,10 +3,6 @@ from django.shortcuts import render, get_object_or_404
 from blog.models import Post, Tag
 
 
-def get_related_posts_count(tag):
-    return tag.posts.count()
-
-
 def serialize_post(post):
     tags = list(post.tags.all())
     return {
