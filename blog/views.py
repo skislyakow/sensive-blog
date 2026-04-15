@@ -1,6 +1,6 @@
 from django.db.models import Count, Prefetch
 from django.shortcuts import render, get_object_or_404
-from blog.models import Comment, Post, Tag
+from blog.models import Post, Tag
 
 
 def get_related_posts_count(tag):
@@ -76,7 +76,7 @@ def post_detail(request, slug):
         slug=slug
     )
 
-    comments = Comment.objects.filter(post=post).select_related('author')
+    comments = post.comments.select_related('author')
     serialized_comments = []
     for comment in comments:
         serialized_comments.append({
